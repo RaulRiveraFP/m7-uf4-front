@@ -1,24 +1,33 @@
 'use client'
 
-import { Card, CardContent } from "@/components/ui/card"; // asumiendo shadcn/ui cards
+import { useState } from 'react';
+import { useClickContext } from './ClickContext'; // ajusta ruta según estructura
+import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 
 interface TarjetaProps {
   nombre: string;
   imagen: string;
-  onClick?: () => void;
 }
 
-export function Tarjeta({ nombre, imagen, onClick }: TarjetaProps) {
+export function Tarjeta({ nombre, imagen }: TarjetaProps) {
+  const [clicks, setClicks] = useState(0);
+  const { increment } = useClickContext();
+
+  function handleClick() {
+    setClicks((prev) => prev + 1);
+    increment();
+  }
+
   return (
     <Card
-      onClick={onClick}
+      onClick={handleClick}
       className="cursor-pointer hover:shadow-lg transition-shadow"
       role="button"
       tabIndex={0}
-      aria-label={`Tarjeta de ${nombre}`}
+      aria-label={`Tarjeta de ${nombre}, clicado ${clicks} veces`}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onClick?.();
+        if (e.key === "Enter" || e.key === " ") handleClick();
       }}
     >
       <CardContent className="flex flex-col items-center p-4">
@@ -26,6 +35,7 @@ export function Tarjeta({ nombre, imagen, onClick }: TarjetaProps) {
           <Image src={imagen} alt={nombre} fill className="object-contain" />
         </div>
         <p className="text-center font-medium">{nombre}</p>
+        <p className="mt-2 text-sm text-gray-500">Clicks: {clicks}</p>
       </CardContent>
     </Card>
   );

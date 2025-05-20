@@ -9,10 +9,9 @@ interface Item {
 
 interface GrupoTarjetasProps {
   items: Item[];
-  onCardClick?: (index: number) => void;
 }
 
-export function GrupoTarjetas({ items, onCardClick }: GrupoTarjetasProps) {
+export function GrupoTarjetas({ items }: GrupoTarjetasProps) {
   return (
     <div className="grid grid-cols-3 gap-4">
       {items.map((item, index) => (
@@ -20,7 +19,6 @@ export function GrupoTarjetas({ items, onCardClick }: GrupoTarjetasProps) {
           key={index}
           nombre={item.nombre}
           imagen={item.imagen}
-          onClick={() => onCardClick?.(index)}
         />
       ))}
     </div>
