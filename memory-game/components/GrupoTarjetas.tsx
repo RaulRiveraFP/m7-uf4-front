@@ -1,24 +1,21 @@
-'use client'
+'use client';
 
 import { Tarjeta } from "./Tarjeta";
+import { useJuegoContext } from "../app/context/JuegoContext";
 
-interface Item {
-  nombre: string;
-  imagen: string;
-}
+export default function GrupoTarjetas() {
+  const { cartas, seleccionarCarta, cartaVolteada, cartaEmparejada } = useJuegoContext();
 
-interface GrupoTarjetasProps {
-  items: Item[];
-}
-
-export function GrupoTarjetas({ items }: GrupoTarjetasProps) {
   return (
     <div className="grid grid-cols-3 gap-4">
-      {items.map((item, index) => (
+      {cartas.map((carta) => (
         <Tarjeta
-          key={index}
-          nombre={item.nombre}
-          imagen={item.imagen}
+          key={carta.id}
+          nombre={carta.nombre}
+          imagen={carta.imagen}
+          estaVolteada={cartaVolteada(carta.id)}
+          estaEmparejada={cartaEmparejada(carta.id)}
+          onClick={() => seleccionarCarta(carta.id)}
         />
       ))}
     </div>
