@@ -19,7 +19,6 @@ export interface JuegoContextType {
   puntuacion: number;
   tiempoRestante: number;
   juegoTerminado: boolean;
-  clicks: number;           // <-- Añadido clicks en la interfaz
 }
 
 const JuegoContext = createContext<JuegoContextType | undefined>(undefined);
@@ -34,30 +33,73 @@ interface Props {
   children: React.ReactNode;
 }
 
-const TIEMPO_INICIAL = 20; // segundos
+const TIEMPO_INICIAL = 200; // segundos
+const NUM_POKEMONS = 3;
+
+function generarIdsAleatorios(cantidad: number, max: number): number[] {
+  const ids = new Set<number>();
+  while (ids.size < cantidad) {
+    ids.add(Math.floor(Math.random() * max) + 1);
+  }
+  return Array.from(ids);
+}
+
+function mezclarArray<T>(array: T[]): T[] {
+  const copia = [...array];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia;
+}
 
 export function JuegoProvider({ children }: Props) {
-  // Ejemplo cartas fijas (deberías cargar las reales)
-  const cartas: Carta[] = [
-    { id: 0, nombre: 'Pikachu', imagen: '/pikachu.png', emparejada: false, volteada: false },
-    { id: 1, nombre: 'Pikachu', imagen: '/pikachu.png', emparejada: false, volteada: false },
-    { id: 2, nombre: 'Charmander', imagen: '/charmander.png', emparejada: false, volteada: false },
-    { id: 3, nombre: 'Charmander', imagen: '/charmander.png', emparejada: false, volteada: false },
-    { id: 4, nombre: 'Bulbasaur', imagen: '/bulbasaur.png', emparejada: false, volteada: false },
-    { id: 5, nombre: 'Bulbasaur', imagen: '/bulbasaur.png', emparejada: false, volteada: false },
-  ];
-
+  const [cartas, setCartas] = useState<Carta[]>([]);
   const [cartasSeleccionadas, setCartasSeleccionadas] = useState<number[]>([]);
   const [cartasEmparejadas, setCartasEmparejadas] = useState<number[]>([]);
   const [tiempoRestante, setTiempoRestante] = useState(TIEMPO_INICIAL);
   const [juegoTerminado, setJuegoTerminado] = useState(false);
-  
-  const [clicks, setClicks] = useState(0);  // <-- Estado clicks añadido
+  const [clientReady, setClientReady] = useState(false);
 
-  // Contador de puntuación = pares encontrados
-  const puntuacion = cartasEmparejadas.length / 2;
+  useEffect(() => {
+    setClientReady(true);
+  }, []);
 
-  // Efecto para contar tiempo
+  useEffect(() => {
+    if (!clientReady) return;
+
+    async function cargarCartasDesdeAPI() {
+      try {
+        const idsAleatorios = generarIdsAleatorios(NUM_POKEMONS, 151);
+        const promesas = idsAleatorios.map((id) =>
+          fetch(`https://pokeapi.co/api/v2/pokemon/${id}`).then((res) => res.json())
+        );
+        const datos = await Promise.all(promesas);
+
+        const nuevasCartas: Carta[] = datos.flatMap((pokemon, index) => {
+          const cartaBase = {
+            nombre: pokemon.name,
+            imagen: pokemon.sprites.front_default,
+            emparejada: false,
+            volteada: false,
+          };
+
+          return [
+            { ...cartaBase, id: index * 2 },
+            { ...cartaBase, id: index * 2 + 1 },
+          ];
+        });
+
+        const mezcladas = mezclarArray(nuevasCartas);
+        setCartas(mezcladas);
+      } catch (err) {
+        console.error('Error cargando pokémons:', err);
+      }
+    }
+
+    cargarCartasDesdeAPI();
+  }, [clientReady]);
+
   useEffect(() => {
     if (tiempoRestante <= 0) {
       setJuegoTerminado(true);
@@ -67,38 +109,34 @@ export function JuegoProvider({ children }: Props) {
     if (juegoTerminado) return;
 
     const timer = setTimeout(() => {
-      setTiempoRestante(tiempoRestante - 1);
+      setTiempoRestante((prev) => prev - 1);
     }, 1000);
 
     return () => clearTimeout(timer);
   }, [tiempoRestante, juegoTerminado]);
 
-  // Control de selección de cartas y emparejamiento
+  // 👉 ESTA ES LA PARTE MODIFICADA
   useEffect(() => {
     if (cartasSeleccionadas.length === 2) {
-      const [primera, segunda] = cartasSeleccionadas;
+      const [id1, id2] = cartasSeleccionadas;
+      const carta1 = cartas.find((c) => c.id === id1);
+      const carta2 = cartas.find((c) => c.id === id2);
 
-      if (primera === segunda) {
-        // Evitar doble clic sobre misma carta
-        setTimeout(() => {
-          setCartasSeleccionadas([]);
-        }, 1000);
-        return;
-      }
+      if (!carta1 || !carta2) return;
+
+      const esEmparejada = carta1.nombre === carta2.nombre;
 
       const timeout = setTimeout(() => {
-        // Se comparan las cartas por id de par (mitad del id si se duplican)
-        const mismaCarta = Math.floor(primera / 2) === Math.floor(segunda / 2);
-
-        if (mismaCarta) {
-          setCartasEmparejadas((prev) => [...prev, primera, segunda]);
+        if (esEmparejada) {
+          setCartasEmparejadas((prev) => [...prev, id1, id2]);
         }
         setCartasSeleccionadas([]);
       }, 1000);
 
       return () => clearTimeout(timeout);
     }
-  }, [cartasSeleccionadas]);
+  }, [cartasSeleccionadas, cartas]);
+  // 👆 FIN DE LA PARTE MODIFICADA
 
   const seleccionarCarta = (id: number) => {
     if (
@@ -108,7 +146,6 @@ export function JuegoProvider({ children }: Props) {
       !juegoTerminado
     ) {
       setCartasSeleccionadas((prev) => [...prev, id]);
-      setClicks((c) => c + 1);  // <-- Aquí sumamos 1 click cada vez que seleccionas una carta
     }
   };
 
@@ -121,8 +158,12 @@ export function JuegoProvider({ children }: Props) {
     setCartasEmparejadas([]);
     setTiempoRestante(TIEMPO_INICIAL);
     setJuegoTerminado(false);
-    setClicks(0);  // <-- Reiniciar clicks al reiniciar juego
+    setCartas([]);
+    setClientReady(false);
+    setTimeout(() => setClientReady(true), 10);
   };
+
+  const puntuacion = cartasEmparejadas.length / 2;
 
   return (
     <JuegoContext.Provider
@@ -135,7 +176,6 @@ export function JuegoProvider({ children }: Props) {
         puntuacion,
         tiempoRestante,
         juegoTerminado,
-        clicks,      // <-- Pasamos clicks en el contexto
       }}
     >
       {children}
