@@ -15,15 +15,13 @@ function JuegoContent() {
 
       {juegoTerminado ? (
         <>
-          <p className="text-center text-red-500 text-lg font-bold">Temps esgotat! 🎮</p>
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={reiniciarJuego}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-            >
-              Tornar a jugar
-            </button>
-          </div>
+      <div className="mensaje-final">
+        <h2>¡Felicidades por terminar la partida!</h2>
+        <p>Tiempo restante: {tiempoRestante} segundos</p>
+        <p>Puntuación: {puntuacion} pares encontrados</p>
+        <p>Clicks realizados: {clicks}</p>
+        <button onClick={reiniciarJuego}>Volver a jugar</button>
+      </div>
         </>
       ) : (
         <GrupoTarjetas />

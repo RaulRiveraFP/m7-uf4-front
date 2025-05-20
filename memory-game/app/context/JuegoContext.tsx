@@ -19,6 +19,7 @@ export interface JuegoContextType {
   puntuacion: number;
   tiempoRestante: number;
   juegoTerminado: boolean;
+  clicks: number;
 }
 
 const JuegoContext = createContext<JuegoContextType | undefined>(undefined);
@@ -60,6 +61,7 @@ export function JuegoProvider({ children }: Props) {
   const [tiempoRestante, setTiempoRestante] = useState(TIEMPO_INICIAL);
   const [juegoTerminado, setJuegoTerminado] = useState(false);
   const [clientReady, setClientReady] = useState(false);
+  const [clicks, setClicks] = useState(0);
 
   useEffect(() => {
     setClientReady(true);
@@ -115,7 +117,7 @@ export function JuegoProvider({ children }: Props) {
     return () => clearTimeout(timer);
   }, [tiempoRestante, juegoTerminado]);
 
-  // 👉 ESTA ES LA PARTE MODIFICADA
+  // Controlamos la lógica de cartas seleccionadas
   useEffect(() => {
     if (cartasSeleccionadas.length === 2) {
       const [id1, id2] = cartasSeleccionadas;
@@ -128,7 +130,14 @@ export function JuegoProvider({ children }: Props) {
 
       const timeout = setTimeout(() => {
         if (esEmparejada) {
-          setCartasEmparejadas((prev) => [...prev, id1, id2]);
+          setCartasEmparejadas((prev) => {
+            const nuevosEmparejados = [...prev, id1, id2];
+            // Si ya emparejamos todas las cartas, terminamos el juego
+            if (nuevosEmparejados.length === cartas.length) {
+              setJuegoTerminado(true);
+            }
+            return nuevosEmparejados;
+          });
         }
         setCartasSeleccionadas([]);
       }, 1000);
@@ -136,7 +145,6 @@ export function JuegoProvider({ children }: Props) {
       return () => clearTimeout(timeout);
     }
   }, [cartasSeleccionadas, cartas]);
-  // 👆 FIN DE LA PARTE MODIFICADA
 
   const seleccionarCarta = (id: number) => {
     if (
@@ -146,6 +154,7 @@ export function JuegoProvider({ children }: Props) {
       !juegoTerminado
     ) {
       setCartasSeleccionadas((prev) => [...prev, id]);
+      setClicks((prev) => prev + 1); // Incrementamos clicks por cada selección válida
     }
   };
 
@@ -159,6 +168,7 @@ export function JuegoProvider({ children }: Props) {
     setTiempoRestante(TIEMPO_INICIAL);
     setJuegoTerminado(false);
     setCartas([]);
+    setClicks(0);
     setClientReady(false);
     setTimeout(() => setClientReady(true), 10);
   };
@@ -176,6 +186,7 @@ export function JuegoProvider({ children }: Props) {
         puntuacion,
         tiempoRestante,
         juegoTerminado,
+        clicks,
       }}
     >
       {children}
